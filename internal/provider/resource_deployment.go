@@ -210,10 +210,6 @@ func resourceDeployment() *schema.Resource {
 	}
 }
 
-// func deploy(deployment []gridtypes.Workload, apiClient apiClient){
-
-// }
-
 func getFreeIP(ipRange gridtypes.IPNet, usedIPs []string) (string, error) {
 	i := 2
 	l := len(ipRange.IP)
@@ -279,7 +275,6 @@ func resourceDeploymentCreate(ctx context.Context, d *schema.ResourceData, meta 
 	cl := apiClient.client
 
 	var diags diag.Diagnostics
-	// twinID := d.Get("twinid").(string)
 	nodeID := uint32(d.Get("node").(int))
 
 	disks := d.Get("disks").([]interface{})
@@ -623,32 +618,6 @@ func resourceDeploymentUpdate(ctx context.Context, d *schema.ResourceData, meta 
 	if d.HasChange("node") {
 		return diag.FromErr(errors.New("changing node is not supported, you need to destroy the deployment and reapply it again"))
 	}
-	deploymentHasChange := false
-	disksHasChange := false
-	vmsHasChange := false
-	zdbsHasChange := false
-
-	if d.HasChange("newtork_name") {
-		deploymentHasChange = true
-		disksHasChange = true
-	}
-	if d.HasChange("ip_range") {
-		deploymentHasChange = true
-		disksHasChange = true
-	}
-	if d.HasChange("disks") {
-		deploymentHasChange = true
-		disksHasChange = true
-	}
-	if d.HasChange("vms") {
-		deploymentHasChange = true
-		vmsHasChange = true
-	}
-
-	if d.HasChange("zdbs") {
-		deploymentHasChange = true
-		zdbsHasChange = true
-	}
 	oldDisks, _ := d.GetChange("disks")
 	oldVms, _ := d.GetChange("vms")
 	nodeID := uint32(d.Get("node").(int))
@@ -662,14 +631,12 @@ func resourceDeploymentUpdate(ctx context.Context, d *schema.ResourceData, meta 
 	for _, disk := range disks {
 		data := disk.(map[string]interface{})
 		version := 0
-		if disksHasChange {
 
-			changed, oldDisk := diskHasChanged(data, oldDisks.([]interface{}))
-			if changed && oldDisk != nil {
-				version = oldDisk["version"].(int) + 1
-			} else if !changed && oldDisk != nil {
-				version = oldDisk["version"].(int)
-			}
+		changed, oldDisk := diskHasChanged(data, oldDisks.([]interface{}))
+		if changed && oldDisk != nil {
+			version = oldDisk["version"].(int) + 1
+		} else if !changed && oldDisk != nil {
+			version = oldDisk["version"].(int)
 		}
 		data["version"] = version
 		workload := gridtypes.Workload{
@@ -692,14 +659,12 @@ func resourceDeploymentUpdate(ctx context.Context, d *schema.ResourceData, meta 
 	for _, zdb := range zdbs {
 		data := zdb.(map[string]interface{})
 		version := 0
-		if zdbsHasChange {
 
-			changed, oldZdb := zdbHasChanged(data, oldZdbs.([]interface{}))
-			if changed && oldZdb != nil {
-				version = oldZdb["version"].(int) + 1
-			} else if !changed && oldZdb != nil {
-				version = oldZdb["version"].(int)
-			}
+		changed, oldZdb := zdbHasChanged(data, oldZdbs.([]interface{}))
+		if changed && oldZdb != nil {
+			version = oldZdb["version"].(int) + 1
+		} else if !changed && oldZdb != nil {
+			version = oldZdb["version"].(int)
 		}
 		data["version"] = version
 		pwd, err := crypto.EncryptECDH([]byte(data["password"].(string)), userSK, identity.PublicKey)
@@ -726,14 +691,12 @@ func resourceDeploymentUpdate(ctx context.Context, d *schema.ResourceData, meta 
 	for _, vm := range vms {
 		data := vm.(map[string]interface{})
 		version := 0
-		if vmsHasChange {
 
-			changed, oldVmachine := vmHasChanged(data, oldVms.([]interface{}))
-			if changed && oldVmachine != nil {
-				version = oldVmachine["version"].(int) + 1
-			} else if !changed && oldVmachine != nil {
-				version = oldVmachine["version"].(int)
-			}
+		changed, oldVmachine := vmHasChanged(data, oldVms.([]interface{}))
+		if changed && oldVmachine != nil {
+			version = oldVmachine["version"].(int) + 1
+		} else if !changed && oldVmachine != nil {
+			version = oldVmachine["version"].(int)
 		}
 		data["version"] = version
 		mount_points := data["mounts"].([]interface{})
@@ -780,12 +743,9 @@ func resourceDeploymentUpdate(ctx context.Context, d *schema.ResourceData, meta 
 	}
 	d.Set("vms", updatedVms)
 	dlVersion := d.Get("version").(int)
-	if deploymentHasChange {
-		dlVersion = dlVersion + 1
-	}
 
 	dl := gridtypes.Deployment{
-		Version: dlVersion,
+		Version: dlVersion + 1,
 		TwinID:  uint32(apiClient.twin_id), //LocalTwin,
 		// this contract id must match the one on substrate
 		Workloads: workloads,
